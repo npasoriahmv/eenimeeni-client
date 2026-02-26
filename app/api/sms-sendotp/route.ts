@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+export const preferredRegion = ['bom1'];
+
 export async function POST(request: Request) {
   const requestId = `smsotp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -7,6 +10,11 @@ export async function POST(request: Request) {
     if (!value) return 'missing';
     if (value.length <= 8) return `${value.slice(0, 2)}***`;
     return `${value.slice(0, 4)}...${value.slice(-4)}`;
+  };
+
+  const normalizeEnv = (value?: string | null) => {
+    if (!value) return '';
+    return value.trim().replace(/^['"]|['"]$/g, '');
   };
 
   try {
@@ -19,16 +27,18 @@ export async function POST(request: Request) {
     });
 
     // 1. Credentials from your Airtel IQ Dashboard
-    const CUSTOMER_ID = process.env.CUSTOMER_ID!;
-    const ENTITY_ID = process.env.ENTITY_ID!; // From DLT Portal
-    const TEMPLATE_ID = process.env.TEMPLATE_ID!; // From DLT Portal
-    const AUTHORIZATION = process.env.AUTHORIZATION!;
+    const CUSTOMER_ID = normalizeEnv(process.env.CUSTOMER_ID);
+    const ENTITY_ID = normalizeEnv(process.env.ENTITY_ID); // From DLT Portal
+    const TEMPLATE_ID = normalizeEnv(process.env.TEMPLATE_ID); // From DLT Portal
+    const AUTHORIZATION = normalizeEnv(process.env.AUTHORIZATION);
 
     console.log(`[sms-sendotp][${requestId}] Env check`, {
       hasCustomerId: Boolean(CUSTOMER_ID),
       hasEntityId: Boolean(ENTITY_ID),
       hasTemplateId: Boolean(TEMPLATE_ID),
       hasAuthorization: Boolean(AUTHORIZATION),
+      authorizationLooksBasic: AUTHORIZATION.startsWith('Basic '),
+      authorizationLength: AUTHORIZATION.length,
       customerIdPreview: mask(CUSTOMER_ID),
       entityIdPreview: mask(ENTITY_ID),
       templateIdPreview: mask(TEMPLATE_ID),
@@ -43,6 +53,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'mobile and message are required', requestId },
         { status: 400 }
+      );
+    }
+
+    if (!CUSTOMER_ID || !ENTITY_ID || !TEMPLATE_ID || !AUTHORIZATION) {
+      console.error(`[sms-sendotp][${requestId}] Missing required env vars after normalization`);
+      return NextResponse.json(
+        { error: 'Server configuration missing required SMS credentials', requestId },
+        { status: 500 }
       );
     }
     
@@ -71,6 +89,8 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'eenimeeni-client/1.0',
         'Authorization': AUTHORIZATION,
       },
       body: body,
@@ -91,6 +111,7 @@ export async function POST(request: Request) {
       ok: response.ok,
       status: response.status,
       statusText: response.statusText,
+      responseHeaders: Object.fromEntries(response.headers.entries()),
       data,
     });
 
