@@ -1,0 +1,21 @@
+name: Reconcile Cron Job
+
+on:
+  schedule:
+    - cron: "*/1 * * * *"
+  workflow_dispatch:
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call Reconcile API securely
+        env:
+          CRON_URL: ${{ secrets.CRON_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          echo "Calling $CRON_URL"
+          curl -X GET "$CRON_URL" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            --fail

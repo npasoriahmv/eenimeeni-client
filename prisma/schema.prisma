@@ -1,0 +1,489 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                  String                @id @default(cuid())
+  phone               String                @unique
+  email               String?               @unique
+  createdAt           DateTime              @default(now())
+  loyaltyPoints       Int                   @default(0)
+  parentName          String
+  address             String?
+  bookings            Booking[]
+  children            Child[]
+  MinyMoePartyBooking MinyMoePartyBooking[]
+  payments            Payment[]
+  venueBookings       VenueBooking[]
+  workshopbooking     WorkShopBooking[]
+  emmmPartyBooking    emmmPartyBooking[]
+}
+
+model Child {
+  id       String    @id @default(cuid())
+  name     String
+  dob      DateTime
+  allergy  String?
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings Booking[] @relation("BookingChildren")
+}
+
+model Booking {
+  id               String             @id @default(cuid())
+  userId           String
+  type             BookingType        @default(EENIMEENI)
+  date             DateTime
+  startTime        DateTime
+  endTime          DateTime
+  points_earned    Int?
+  points_spent     Int?
+  guestChildren    Int                @default(0)
+  guardians        Int                @default(0)
+  amount           Decimal            @db.Decimal(10, 2)
+  status           BookingStatus      @default(PENDING)
+  extraDetails     Json?
+  createdAt        DateTime
+  bookingId        String?            @unique
+  createdBy        String?
+  checkInTime      DateTime?
+  checkOutTime     DateTime?
+  bookingNumber    Int                @default(autoincrement())
+  checkInStatus    CheckInStatus?     @default(PENDING)
+  cafeSnapshot     Json?
+  cafeSubtotal     Int?
+  runnerId         String?
+  Staff            Staff?             @relation(fields: [createdBy], references: [id])
+  Runner           Runner?            @relation(fields: [runnerId], references: [id])
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  BookingExtension BookingExtension[]
+  payments         Payment[]
+  children         Child[]            @relation("BookingChildren")
+}
+
+model Payment {
+  id                    String               @id @default(cuid())
+  merchantTxnNo         String               @unique
+  bookingId             String?
+  userId                String
+  amount                Decimal              @db.Decimal(10, 2)
+  transaction_method    String?
+  invoiceNumber         String?              @unique
+  transactionId         String?              @unique
+  status                PaymentStatus        @default(PENDING)
+  responseCode          String?
+  responseMessage       String?
+  rawResponse           Json?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  invoiceFY             String?
+  invoiceSerial         Int?
+  workShopBookingId     String?
+  venueBookingId        String?
+  minyMoePartyBookingId String?
+  paymentType           PaymentType?
+  emmmPartyBookingId    String?
+  booking               Booking?             @relation(fields: [bookingId], references: [id])
+  emmmPartyBooking      emmmPartyBooking?    @relation(fields: [emmmPartyBookingId], references: [id])
+  MinyMoePartyBooking   MinyMoePartyBooking? @relation(fields: [minyMoePartyBookingId], references: [id])
+  user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venueBooking          VenueBooking?        @relation(fields: [venueBookingId], references: [id])
+  workShopBooking       WorkShopBooking?     @relation(fields: [workShopBookingId], references: [id])
+
+  @@unique([invoiceFY, invoiceSerial])
+}
+
+model InvoiceCounter {
+  financialYear String   @id
+  lastSerial    Int      @default(0)
+  updatedAt     DateTime @updatedAt
+}
+
+model BookingExtension {
+  id               String   @id
+  extended_minutes Int?
+  amount           Int?
+  createdAt        DateTime @default(now())
+  createdBy        String?
+  bookingId        String
+  Booking          Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  Staff            Staff?   @relation(fields: [createdBy], references: [id])
+}
+
+model Slot {
+  id        String      @id
+  typeId    BookingType
+  slotDate  DateTime
+  startTime DateTime
+  endTime   DateTime
+  reason    String?
+  status    SlotStatus  @default(AVAILABLE)
+}
+
+model Staff {
+  id                  String                @id
+  name                String
+  email               String                @unique
+  passwordHash        String
+  role                StaffRole
+  status              StaffStatus           @default(ACTIVE)
+  createdAt           DateTime              @default(now())
+  Booking             Booking[]
+  BookingExtension    BookingExtension[]
+  MinyMoePartyBooking MinyMoePartyBooking[]
+  emmmPartyBooking    emmmPartyBooking[]
+}
+
+model Pricing {
+  id    String      @id
+  area  BookingType
+  price Decimal     @db.Decimal(10, 2)
+}
+
+model VenueConfig {
+  id               String   @id @default(cuid())
+  minDurationHours Int
+  maxDurationHours Int
+  maxHeadcount     Int?
+  price_per_hour   Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model VenueBooking {
+  id            String         @id @default(cuid())
+  userId        String
+  startTime     DateTime
+  endTime       DateTime
+  durationHours Int
+  headcount     Int
+  totalAmount   Decimal        @db.Decimal(10, 2)
+  status        BookingStatus  @default(PENDING)
+  pricingSnap   Json
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  bookingId     String?        @unique
+  bookingNumber Int            @default(autoincrement())
+  checkInStatus CheckInStatus? @default(PENDING)
+  payments      Payment[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ContactInquiry {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  phone     String
+  queryType QueryType
+  message   String
+  status    InquiryStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+
+  @@index([email])
+  @@index([queryType])
+}
+
+model WorkShop {
+  id                    String            @id @default(cuid())
+  slug                  String            @unique
+  title                 String
+  shortTagline          String
+  startAt               DateTime
+  endAt                 DateTime
+  ageGroup              String
+  fee                   Int
+  bannerImage           String
+  description           String
+  whatKidsLearn         String[]
+  inclusions            String[]
+  importantInstructions String[]
+  cancellationPolicy    String?
+  sessionPlans          Json
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  maxkids               Int
+  workShopBookings      WorkShopBooking[]
+
+  @@index([startAt])
+}
+
+model WorkShopBooking {
+  id            String                @id @default(cuid())
+  userId        String
+  workshopId    String
+  participants  Int                   @default(1)
+  amount        Decimal               @db.Decimal(10, 2)
+  status        WorkshopBookingStatus @default(PENDING)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  bookingId     String?               @unique
+  bookingNumber Int                   @default(autoincrement())
+  checkInStatus CheckInStatus?        @default(PENDING)
+  payments      Payment[]
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workshop      WorkShop              @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+}
+
+model MinyMoePartyBooking {
+  id              String         @id @default(cuid())
+  userId          String
+  startTime       DateTime
+  endTime         DateTime
+  kids            Int
+  adults          Int
+  status          BookingStatus  @default(PENDING)
+  createdAt       DateTime       @default(now())
+  createdBy       String?
+  baseAmount      Decimal        @db.Decimal(10, 2)
+  bookingNumber   Int            @default(autoincrement())
+  checkInStatus   CheckInStatus? @default(PENDING)
+  durationMinutes Int
+  extrasAmount    Decimal        @db.Decimal(10, 2)
+  foodSnapshot    Json
+  packageSnapshot Json
+  pricingSnapshot Json
+  totalAmount     Decimal        @db.Decimal(10, 2)
+  totalGuests     Int
+  updatedAt       DateTime       @updatedAt
+  bookingId       String?        @unique
+  Staff           Staff?         @relation(fields: [createdBy], references: [id])
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments        Payment[]
+
+  @@index([status])
+  @@index([startTime])
+}
+
+model PartyBookingConfig {
+  id        String   @id
+  minKids   Int
+  minAdults Int
+  maxKids   Int
+  maxAdults Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+model PartyPackage {
+  id                String   @id @default(cuid())
+  name              String
+  pricePerPerson    Int
+  starterCount      Int
+  mainCount         Int
+  shortDesc         String?
+  longDesc          String?
+  badge             String?
+  displayOrder      Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  durationMinutes   Int      @default(150)
+  starterItems      String[]
+  starterAddonPrice Int
+  mainItems         String[]
+  mainAddonPrice    Int
+  dessertItems      String[]
+  AddonItems        Json[]
+  dessertAddonPrice Int
+  dessertCount      Int
+}
+
+model Employee {
+  id                String         @id
+  name              String
+  email             String         @unique
+  phone             String         @unique
+  role              EmployeeRole
+  status            EmployeeStatus @default(ACTIVE)
+  salary            Decimal?       @db.Decimal(10, 2)
+  joinDate          DateTime
+  dateOfBirth       DateTime?
+  address           String?
+  emergencyContact  String?
+  emergencyPhone    String?
+  bankAccountNumber String?
+  bankIfsc          String?
+  aadharNumber      String?
+  panNumber         String?
+  profileImage      String?
+  notes             String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([status])
+  @@index([role])
+}
+
+model emmmPartyBooking {
+  id              String         @id @default(cuid())
+  userId          String
+  startTime       DateTime
+  endTime         DateTime
+  kids            Int
+  adults          Int
+  status          BookingStatus  @default(PENDING)
+  createdAt       DateTime       @default(now())
+  createdBy       String?
+  baseAmount      Decimal        @db.Decimal(10, 2)
+  bookingNumber   Int            @default(autoincrement())
+  checkInStatus   CheckInStatus? @default(PENDING)
+  durationMinutes Int
+  extrasAmount    Decimal        @db.Decimal(10, 2)
+  foodSnapshot    Json
+  packageSnapshot Json
+  pricingSnapshot Json
+  totalAmount     Decimal        @db.Decimal(10, 2)
+  totalGuests     Int
+  updatedAt       DateTime       @updatedAt
+  bookingId       String?        @unique
+  payments        Payment[]
+  Staff           Staff?         @relation(fields: [createdBy], references: [id])
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([startTime])
+}
+
+model PromoCode {
+  id              String       @id
+  code            String       @unique
+  description     String?
+  area            Area
+  discountType    DiscountType
+  discountPercent Decimal?     @db.Decimal(5, 2)
+  validFrom       DateTime
+  validTo         DateTime
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime
+
+  @@index([validFrom])
+  @@index([validTo])
+}
+
+model CafeConfig {
+  id            String   @id
+  BeverageItems Json[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  MenuItems     Json[]
+}
+
+model Runner {
+  id            String       @id
+  runnerName    String
+  bookingId     String
+  vehicleNumber String
+  makeModel     String
+  status        RunnerStatus @default(PENDING)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime
+  Booking       Booking[]
+}
+
+enum PaymentType {
+  ADVANCE
+  FULL
+  BALANCE
+}
+
+enum BookingType {
+  EENIMEENI
+  MINYMOE
+  EENIMEENI_MINYMOE
+}
+
+enum WorkshopBookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum CheckInStatus {
+  PENDING
+  CHECKED_IN  @map("CHECKED-IN")
+  CHECKED_OUT @map("CHECKED-OUT")
+  CANCELLED
+  LAPSED
+}
+
+enum SlotStatus {
+  AVAILABLE
+  BOOKED
+  BLOCKED
+}
+
+enum StaffRole {
+  ADMIN
+  STAFF
+}
+
+enum StaffStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum QueryType {
+  GENERAL
+  PARTY
+  EVENT
+  OTHER
+}
+
+enum InquiryStatus {
+  PENDING
+  RESPONDED
+  CLOSED
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum EmployeeRole {
+  MANAGER
+  COORDINATOR
+  COUNTER_PERSON
+  CLEANER
+  SECURITY
+  OTHER
+}
+
+enum Area {
+  EENIMEENI
+  VENUE
+  PARTY
+  WORKSHOP
+  EENIMEENI_MINYMOE
+}
+
+enum DiscountType {
+  CAMPAIGN
+  MANAGER
+  ADMIN
+}
+
+enum RunnerStatus {
+  PICKED_UP
+  DROPPED_OFF
+  PENDING
+}
