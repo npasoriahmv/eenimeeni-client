@@ -5,11 +5,11 @@ FROM oven/bun:1
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY package.json bun.lock ./
+COPY . .
+
 RUN bun install
 
 # Copy the rest of the project
-COPY . .
 
 # Build Next.js
 RUN bun run build
