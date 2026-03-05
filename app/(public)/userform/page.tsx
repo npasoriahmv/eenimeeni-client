@@ -128,18 +128,37 @@ export default function RegisterPage() {
     const otp = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
     setSendingOtp(true);
     try {
-      await fetch("/api/sms-sendotp", {
+      const res = await fetch("/api/sms-sendotp", {
         method: "POST",
         body: JSON.stringify({ mobile: `91${form.phone}`, message: `Welcome to Eeni Meeni Miny Moe. ${otp} is your verification code for registration. This OTP is valid for 5 minutes. If you did not request this, please ignore this message.` }),
       });
+
+      if (!res.ok) {
+        let errorMessage = "Unable to send OTP. Please try again.";
+        try {
+          const payload = await res.json();
+          if (payload && typeof payload.error === "string" && payload.error.trim()) {
+            errorMessage = payload.error;
+          }
+        } catch {
+        }
+        throw new Error(errorMessage);
+      }
+
       setGeneratedOtp(otp);
       setOtpSent(true);
       setOtpVerified(false);
       setOtpDigits(["", "", "", ""]);
       setOtpTimer(30);
       setOtpExpiresAt(Date.now() + 5 * 60 * 1000);
-    } catch {
-      setErrors((prev) => ({ ...prev, _global: "Unable to send OTP. Please try again." }));
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next._global;
+        return next;
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to send OTP. Please try again.";
+      setErrors((prev) => ({ ...prev, _global: message }));
     } finally {
       setSendingOtp(false);
     }

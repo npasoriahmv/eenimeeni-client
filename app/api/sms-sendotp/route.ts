@@ -17,6 +17,43 @@ export async function POST(request: Request) {
     return value.trim().replace(/^['"]|['"]$/g, '');
   };
 
+  const parseAirtelResponse = (rawText: string, contentType: string | null) => {
+    const normalizedContentType = (contentType ?? '').toLowerCase();
+    const shouldTryJson =
+      normalizedContentType.includes('application/json') ||
+      normalizedContentType.includes('+json') ||
+      (!normalizedContentType && rawText.trim().startsWith('{')) ||
+      (!normalizedContentType && rawText.trim().startsWith('['));
+
+    if (!rawText) {
+      return { parsed: {}, parseError: null as unknown, isJson: shouldTryJson };
+    }
+
+    if (!shouldTryJson) {
+      return {
+        parsed: {
+          raw: rawText,
+          contentType: contentType ?? 'unknown',
+        },
+        parseError: null as unknown,
+        isJson: false,
+      };
+    }
+
+    try {
+      return { parsed: JSON.parse(rawText), parseError: null as unknown, isJson: true };
+    } catch (parseError) {
+      return {
+        parsed: {
+          raw: rawText,
+          contentType: contentType ?? 'unknown',
+        },
+        parseError,
+        isJson: true,
+      };
+    }
+  };
+
   try {
     console.log(`[sms-sendotp][${requestId}] Incoming OTP request`);
 
@@ -97,13 +134,14 @@ export async function POST(request: Request) {
     });
 
     const rawText = await response.text();
-    let data: unknown = rawText;
-    try {
-      data = rawText ? JSON.parse(rawText) : {};
-    } catch (parseError) {
+    const responseContentType = response.headers.get('content-type');
+    const { parsed: data, parseError, isJson } = parseAirtelResponse(rawText, responseContentType);
+
+    if (parseError) {
       console.error(`[sms-sendotp][${requestId}] Failed to parse Airtel response JSON`, {
         parseError,
-        rawText,
+        responseContentType,
+        rawTextPreview: rawText.slice(0, 500),
       });
     }
 
@@ -113,6 +151,8 @@ export async function POST(request: Request) {
       statusText: response.statusText,
       responseHeaders: Object.fromEntries(response.headers.entries()),
       data,
+      responseContentType,
+      parsedAsJson: isJson,
     });
 
     if (!response.ok) {
