@@ -83,8 +83,8 @@ export const Navbar: React.FC = () => {
           </div>
 
           <div>
-            <h1 className="text-2xl font-black bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 bg-clip-text text-transparent">
-              Eeni Meeni
+            <h1 className="text-xl font-black bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 bg-clip-text text-transparent">
+              Eeni Meeni Miny Moe
             </h1>
             <p className="text-xs text-gray-500 font-semibold tracking-wide">
               Where Magic Happens ✨

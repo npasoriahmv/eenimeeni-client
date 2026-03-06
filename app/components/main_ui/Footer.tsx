@@ -24,7 +24,7 @@ export const Footer = () => {
             </div>
 
             <h2 className="text-3xl font-extrabold bg-gradient-to-r from-purple-400 via-pink-400 to-orange-300 bg-clip-text text-transparent tracking-tight">
-              Eeni Meeni
+              Eeni Meeni Miny Moe
             </h2>
           </div>
 
@@ -55,7 +55,7 @@ export const Footer = () => {
 
           {/* Bottom Bar */}
           <p className="text-xs text-gray-500 tracking-wide">
-            © {new Date().getFullYear()} Eeni Meeni — All Rights Reserved
+            © {new Date().getFullYear()} Eeni Meeni Miny Moe — All Rights Reserved
           </p>
         </div>
       </Card>
